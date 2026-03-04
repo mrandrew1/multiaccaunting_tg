@@ -1,0 +1,10 @@
+services:
+  server:
+    build: .
+    ports:
+      - "50051:50051"
+    environment:
+      GRPC_ADDR: ":50051"
+      TELEGRAM_APP_ID: ${TELEGRAM_APP_ID}
+      TELEGRAM_APP_HASH: ${TELEGRAM_APP_HASH}
+    restart: unless-stopped
