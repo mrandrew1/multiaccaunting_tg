@@ -10,4 +10,3 @@ import (
 func Register(s *grpc.Server, svc pb.TelegramServiceServer) {
 	pb.RegisterTelegramServiceServer(s, svc)
 }
-

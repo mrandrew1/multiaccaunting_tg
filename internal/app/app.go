@@ -8,8 +8,8 @@ import (
 	"google.golang.org/grpc"
 
 	"pact-telegram/internal/config"
-	"pact-telegram/internal/server"
-	"pact-telegram/internal/telegram"
+	"pact-telegram/internal/domain/telegram"
+	"pact-telegram/internal/transport/server"
 )
 
 // App инкапсулирует зависимости и жизненный цикл gRPC-сервера и SessionManager.

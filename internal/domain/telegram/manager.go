@@ -92,4 +92,3 @@ func (m *SessionManager) Shutdown() {
 		_ = s.Stop(context.Background(), true)
 	}
 }
-

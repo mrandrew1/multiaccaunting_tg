@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	pb "pact-telegram/internal/pb/proto"
-	"pact-telegram/internal/telegram"
+	"pact-telegram/internal/domain/telegram"
 )
 
 func strPtr(s string) *string { return &s }

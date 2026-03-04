@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	pb "pact-telegram/internal/pb/proto"
-	"pact-telegram/internal/telegram"
+	"pact-telegram/internal/domain/telegram"
 )
 
 // sessionManager описывает зависимости GRPCServer от менеджера сессий.
