@@ -236,26 +236,54 @@ grpcurl -plaintext \
 
 ## Архитектура и основные компоненты
 
+### Структура проекта
+
+Слои выделены в отдельные каталоги под `internal/`:
+
+```
+internal/
+├── app/                    # application — композиция зависимостей и lifecycle
+├── config/                 # конфигурация из окружения
+├── domain/
+│   └── telegram/          # domain — сущности и логика сессий (Session, SessionManager)
+├── logging/
+├── pb/proto/               # сгенерированный gRPC/protobuf код
+└── transport/
+    └── server/            # transport — gRPC-хендлеры (TelegramService)
+```
+
+- **domain** — доменная логика без привязки к gRPC или протоколам.
+- **transport** — адаптеры к внешнему миру (gRPC); маппинг proto ↔ domain, коды ошибок.
+- **app** — сборка приложения: создаёт domain- и transport-компоненты, запускает сервер и graceful shutdown.
+
 ### Общая схема
 
-- **gRPC‑сервер** (`cmd/server/main.go`, `internal/server`):
-  - инициализирует конфигурацию и логгер;
-  - создаёт `SessionManager`;
-  - поднимает gRPC‑сервер и регистрирует реализацию `TelegramService`;
-  - обрабатывает graceful shutdown (SIGINT/SIGTERM).
+- **Точка входа** (`cmd/server/main.go`):
+  - загружает конфигурацию и логгер;
+  - создаёт приложение через `app.New` (SessionManager + gRPC-сервер);
+  - запускает `app.Run` и обрабатывает SIGINT/SIGTERM.
 
-- **Менеджер сессий** (`internal/telegram/manager.go`):
+- **Приложение** (`internal/app`):
+  - создаёт `SessionManager` (domain) и gRPC-сервис (transport);
+  - поднимает listener и gRPC‑сервер, регистрирует `TelegramService`;
+  - при завершении контекста останавливает сессии и выполняет graceful shutdown сервера.
+
+- **Менеджер сессий** (`internal/domain/telegram/manager.go`):
   - хранит активные сессии в **памяти** (`map[session_id]*Session`);
   - создаёт новые сессии (`CreateSession`), возвращая `session_id` и URL для QR;
   - на удаление (`DeleteSession`) останавливает соответствующую `Session` и освобождает ресурсы.
 
-- **Сессия Telegram** (`internal/telegram/session.go`):
+- **Сессия Telegram** (`internal/domain/telegram/session.go`):
   - одна логическая сессия Telegram (один аккаунт, одна авторизация);
   - хранит состояние (`Pending`, `Ready`, `Closed`);
   - запускает `gotd`‑клиент в отдельной горутине;
   - выполняет QR‑логин через `qrlogin.OnLoginToken` и отдаёт URL в канал `qrCh`;
   - после авторизации принимает запросы на отправку сообщений и обрабатывает входящие апдейты;
   - для входящих сообщений рассылает события подписчикам через метод `broadcast`.
+
+- **Transport — gRPC‑сервис** (`internal/transport/server`):
+  - реализует `TelegramService` из proto: маппит запросы/ответы и делегирует вызовы в domain (`SessionManager`, `Session`);
+  - маппит ошибки Telegram в gRPC-статусы (NotFound, PermissionDenied, ResourceExhausted и т.д.).
 
 - **Protocol Buffers / gRPC‑контракт** (`proto/telegram.proto`):
   - описывает сервис `TelegramService` и сообщения `CreateSessionRequest/Response`, `SendMessageRequest/Response`, `SubscribeMessagesRequest`, `MessageUpdate`, `DeleteSessionRequest/Response`;
